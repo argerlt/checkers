@@ -10,7 +10,9 @@ Big picture: Goal of HEXRD (I think) should be to assist in NF and FF reconstruc
 - NF preprocessing- add to HEXRD?
 - NF SL calibration
 - FF SL calibration
-
+- Base skeleton of Spherical Harmonics ODF
+- Base skeleton of FEM ODF
+  
 ## **Eventual General TODO's**
 - functions to module, workflows to jupyter
 - add python black github action

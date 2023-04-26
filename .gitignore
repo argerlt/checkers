@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+odf/mtex_odf/c/bin/*
+odf/mtex_odf/c/*/*.o
+odf/mtex_odf/c/mex/glnx86/*
+odf/mtex_odf/c/mex/glnxa64/*
+odf/mtex_odf/c/mex/maci/*
+odf/mtex_odf/c/mex/maci64/*
+odf/mtex_odf/c/mex/win32/*
+odf/mtex_odf/c/mex/win64/*
