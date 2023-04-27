@@ -136,3 +136,4 @@ odf/mtex_odf/c/mex/maci/*
 odf/mtex_odf/c/mex/maci64/*
 odf/mtex_odf/c/mex/win32/*
 odf/mtex_odf/c/mex/win64/*
+*.o

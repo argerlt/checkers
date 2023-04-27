@@ -1,0 +1,14 @@
+lP: 1368 1368 1368 
+lh: 6 12 6 
+refl: 1.0000E+00 5.2000E-01 1.2300E+00 1.0000E+00 
+iter_max: 10 
+iter_min: 3 
+flags: 1 
+P: /local/scratch/agerlt/workspace/checkers/odf/mtex_odf/dubna_input_data/pf2odf5666_P.dat
+r: /local/scratch/agerlt/workspace/checkers/odf/mtex_odf/dubna_input_data/pf2odf5666_r.dat
+gh: /local/scratch/agerlt/workspace/checkers/odf/mtex_odf/dubna_input_data/pf2odf5666_gh.dat
+A: /local/scratch/agerlt/workspace/checkers/odf/mtex_odf/dubna_input_data/pf2odf5666_A.dat
+c0: /local/scratch/agerlt/workspace/checkers/odf/mtex_odf/dubna_input_data/pf2odf5666_c0.dat
+w: /local/scratch/agerlt/workspace/checkers/odf/mtex_odf/dubna_input_data/pf2odf5666_w.dat
+res1: /local/scratch/agerlt/workspace/checkers/odf/mtex_odf/dubna_input_data/pf2odf5666_res1.dat
+res2: /local/scratch/agerlt/workspace/checkers/odf/mtex_odf/dubna_input_data/pf2odf5666_res2.dat

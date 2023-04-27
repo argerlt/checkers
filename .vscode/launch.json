@@ -1,0 +1,34 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "C: make and debug active file on linux",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/odf/mtex_odf/${fileBasenameNoExtension}",
+            "args": [  "${workspaceFolder}/odf/mtex_odf/dubna_input_data/pf2odf5666_Linux.txt"],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [
+                {"name":"odf_folder","value": "${workspaceFolder}/odf/mtex_odf"},
+                {"name":"data_folder","value": "${odf_folder}/dubna_input_data"},
+            ],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C/C++: gcc build active file",
+            "miDebuggerPath": "gdb"
+        }
+    ]
+}
