@@ -101,7 +101,7 @@ int main(int argc,char *argv[])
   }
    
   f_param = check_fopen(argv[1],"r");
-  read_param_file(f_param,param,Nparam,argc==3); /*changing argc to 2 turn on auto-deleting of old files*/
+  read_param_file(f_param,param,Nparam,0); /*changing argc to 2 turn on auto-deleting of old files*/
   fclose(f_param);
 
   /* check data consitency */

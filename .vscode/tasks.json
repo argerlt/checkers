@@ -2,9 +2,12 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: gcc build active file",
-            "command": "make clean all ",
-            "args": [],
+            "label": "make_build",
+            "command": "",
+            "args": ["make",
+                    "--directory=${workspaceFolder}/odf/mtex_odf/kernel",
+                    "all",
+                    "install"],
             "options": {
                 "cwd": "${fileDirname}"
             },

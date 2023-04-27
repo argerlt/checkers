@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "C: make and debug active file on linux",
+            "name": "Austins mtex launcher",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/odf/mtex_odf/${fileBasenameNoExtension}",
@@ -27,7 +27,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "C/C++: gcc build active file",
+            "preLaunchTask": "make_build",
             "miDebuggerPath": "gdb"
         }
     ]
