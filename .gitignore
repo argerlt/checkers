@@ -129,7 +129,7 @@ dmypy.json
 .pyre/
 
 odf/mtex_odf/c/bin/*
-odf/mtex_odf/c/*/*.o
+*/**.o
 odf/mtex_odf/c/mex/glnx86/*
 odf/mtex_odf/c/mex/glnxa64/*
 odf/mtex_odf/c/mex/maci/*
