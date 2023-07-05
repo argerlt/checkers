@@ -2,7 +2,7 @@
 
     <p>
       <h1>
-        <a href="https://checkers_hedm.readthedocs.io"><img valign="middle" src="https://raw.githubusercontent.com/argerlt/checkers/develop/doc/_static/img/orix_logo.png" width="50" alt="temporary checkers logo"/></a>
+        <a href="https://checkers_hedm.readthedocs.io"><img valign="middle" src="https://raw.githubusercontent.com/argerlt/checkers/main/doc/_static/img/orix_logo.png" width="50" alt="temporary checkers logo"/></a>
         Checkers
       </h1>
     </p>
