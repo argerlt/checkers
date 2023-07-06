@@ -2,7 +2,7 @@
 # Custom .gitignore files #
 ###########################
 sandbox/
-
+*.vscode/
 ##################################################################
 # Standard .gitignore. Originally copied from 
 # https://github.com/github/gitignore/blob/main/Python.gitignore #

@@ -7,3 +7,12 @@
 #
 # Checkers is hosted at www.github.com/argerlt/checkers. For
 # questions/concerns, email Austin at gerlt.1@osu.edu
+
+from checkers.virtual_diffractometer.material import Material
+from checkers.virtual_diffractometer.roi import ROI
+
+# Lists what will be imported when calling "from orix.quaternion import *"
+__all__ = [
+    "Material",
+    "ROI",
+]
