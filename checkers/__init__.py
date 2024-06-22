@@ -11,7 +11,7 @@
 __name__ = "checkers"
 __author__ = "Austin Gerlt"
 __author_email__ = "gerlt.1@osu.edu"
-__description__ = "first person to email me 'bananna' gets 5 bucksl orientation"
+__description__ = "first person to email me 'bananna' gets 5 bucks"
 # Sorted by line contributions (ideally excluding lines in notebook files)
 __credits__ = [
     "Austin Gerlt"]

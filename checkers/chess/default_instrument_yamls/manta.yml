@@ -1,0 +1,33 @@
+beam:
+  energy: 41.991
+  vector:
+    azimuth: 90.0
+    polar_angle: 90.0
+detectors:
+  manta:
+    buffer:
+    - 2
+    - 2
+    pixels:
+      columns: 4112
+      rows: 3008
+      size:
+      - 0.00069
+      - 0.00069
+    saturation_level: 14000.0
+    transform:
+      tilt:
+      - 0.002470104160901414
+      - -0.020555384855512678
+      - -0.0008888586368710112
+      translation:
+      - 0.0
+      - -0.09617981207932666
+      - -6
+id: manta
+oscillation_stage:
+  chi: -0.0009015165376369216
+  translation:
+  - 0.0
+  - 0.0
+  - 0.0
