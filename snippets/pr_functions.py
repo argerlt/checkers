@@ -289,80 +289,108 @@ class Detector_Reducer():
 def cc3d_feature_finder(data_slice,
                         smallest_free_fid,
                         k,
+                        lowest_observed_layer=0,
                         min_spot_size=30,
-                        min_total_spot_intensity=50000,
+                        min_total_spot_intensity=2000,
                         ):
     # get binarized yes/no, use it to assign spot IDs.
     binarized = (data_slice > 0).astype(np.int8)
     feature_map = cc3d.connected_components(binarized)
-    del binarized
-    # get the id's of the spots that go into the next unlooked at area
-    unfinished_spots, ufc = np.unique(feature_map[-1], False, False, True)
-    # get the id's of already documented spots
-    old_spots = np.unique(feature_map[0])
-    # toss out ones with fewer than 5 pixels of data (almost always noise)
-    unfinished_spots = unfinished_spots[ufc > 4]
-    # clump the feature maps by id.
-    fids, idxs, inv, counts = np.unique(feature_map[:-1], True, True, True)
+    # do a per-layer unique search to throw out spots smaller than 2x2. These
+    # are nearly always burned out pixels that connect spots over multiple
+    # omegas.
+    l_count = data_slice.shape[0]
+    for i in range(l_count):
+        f2v = np.where([feature_map[i]>0])
+        if f2v[0].size <1:
+            continue
+        fm_flat = feature_map[i][f2v[1:]]
+        fid, inv, count = np.unique(fm_flat, False, True, True)
+        # toss 3x3 burned out pixels connecting spots accross omegas.
+        fid[count < 10] = 0
+        fid[fid > 0] = 1
+        fid = fid.astype(np.int8)
+        binarized[i][f2v[1:]] =fid[inv]
+    del fid, inv, count, i
+    # redo the feature map.
+    feature_map = cc3d.connected_components(binarized)
 
-    # find first layer with an unfinished grain in it
-    unfinished_fids = idxs[np.isin(fids, unfinished_spots[1:])]
-    # rarely, a stringer will go through every layer. ignore them.
-    pix_per_layer = feature_map[0].size
-    unfinished_fids = unfinished_fids[unfinished_fids > pix_per_layer]
-    # floor divide to get highest layer with no incomplete spots
-    if unfinished_fids.size == 0:
+    # Get the Feature ID's of spots that go into the next unlooked at area.
+    # we will need to re-run any layers containing these unfinished grains.
+    unfinished_spots = np.unique(feature_map[-1])
+    # similarly, document spots in the bottom layer, as these should already
+    # be documented from previous searches
+    old_spots = np.unique(feature_map[0])
+
+    # at This point, 99(ish)% of the feature map is zeros, so to make the
+    # unique search faster, lets get a vector of just the non-zero parts
+    f2v = np.where(feature_map[:-1] > 0)
+    # do a unique search on just the non-zero data
+    fids, idxs, inv, counts = np.unique(feature_map[f2v], True, True, True)
+    # find the lowest layer with an unfinished spots, but ignore stringers
+    # that run through EVERY layer
+    redo_layers = f2v[0][idxs[np.isin(fids, unfinished_spots)]]
+    if redo_layers.size == 0:
         redo_count = 0
     else:
-        bot_redo_layer = np.min(unfinished_fids // pix_per_layer)
-        redo_count = data_slice.shape[0] - bot_redo_layer
+        redo_count = l_count - np.min(redo_layers[redo_layers>1])
 
-    # find big spots that are complete, new , and not background
+    # Now cleanup remaining feature ids.
+    # find spots that are big, complete, and new
     big_spots = fids[counts > min_spot_size]
     finished_spots = big_spots[~np.isin(big_spots, unfinished_spots)]
     finished_spots = big_spots[~np.isin(big_spots, old_spots)]
-    finished_spots = finished_spots[finished_spots > 0]
+    # make one final binarized map and feature map, just so our feature IDs
+    # are sequential. this is unnecessary, but handy.
+    binarized = binarized*0
+    binarized[np.isin(feature_map,finished_spots)] = 1
+    feature_map = cc3d.connected_components(binarized)
+    final_spot_ids = np.unique(feature_map[feature_map>0])
+    # cleanup, bc memory is precious
+    del inv, counts, idxs, fids, binarized, f2v, old_spots
+    del redo_layers, unfinished_spots
 
-    # use the "good" spots to clean the feature map
-    # NOTE: this is replacing the "bads" with zeros, so when I invert, the
-    # old features are assigned zeros (background) instead of their old fid
-    cleaned_fids = (fids*np.isin(fids, finished_spots))
-    cleaned_fm = np.reshape(cleaned_fids[inv], feature_map[:-1].shape)
-    del feature_map, inv, counts, idxs, fids
+    # done with dense data, so lets switch to sparse matrices.
+    sparse_fm = sparse.COO(feature_map)
+    del feature_map
+    spots = np.zeros([len(final_spot_ids), 4])
+    spot_ids = np.zeros(len(final_spot_ids), dtype=np.uint32)
 
-    # sparsify to save time/space, then find the size and center of each spot
-    sparse_fm = sparse.COO(cleaned_fm)
-    spots = np.zeros([len(finished_spots), 4])
-    spot_ids = np.zeros(len(finished_spots), dtype=np.uint32)
+    # calculate per-spot data
     spot_id = 0
-    for fid in finished_spots:
+    for fid in final_spot_ids:
         loc = np.where(sparse_fm == fid)
-        # if loc[0].max() < explored_layers:
-        #     continue  # triggers if spot was already previously observed
+        if loc[0].max() <= lowest_observed_layer:
+            continue # This spot was already fully observed. Ignore.
         val = data_slice[loc]
         val_sum = np.sum(val)
         if val_sum < min_total_spot_intensity:
             sparse_fm.data[sparse_fm.data == fid] = 0
-            continue  # Triggers if too small. discards and movees on.
+            continue  # Triggers if too small. discards and moves on.
         spots[spot_id, 0] = val_sum
         spots[spot_id, 1:] = np.average(np.stack(loc), weights=val, axis=1)
         spot_ids[spot_id] = fid
         spot_id += 1
-    # cleanup to help with memory leak
+
+    # now that all the cleaning is done, grab the original pixel intensities.
     panel_vals = data_slice[sparse_fm.coords[0],
                             sparse_fm.coords[1],
                             sparse_fm.coords[2],
                             ]
-    del cleaned_fm, cleaned_fids, finished_spots, big_spots, old_spots
-    del data_slice, ufc, unfinished_spots, unfinished_fids
-    if spot_id < 1:  # triggers if no spots were found
+    # cleanup to help with memory leak
+    del data_slice
+
+    # now that all the big datasets are explicitly deleted, allow the code
+    # to exit if it found no spots whatsoever    
+    if spot_id < 1:  # triggers if no spots were found.
         del sparse_fm
         d1 = np.zeros([0, 4], dtype=float)
         d2 = np.zeros([0, 3], dtype=np.int16)
         d3 = np.zeros([0, 1], dtype=float)
         d4 = np.zeros([0, 1], dtype=int)
         return d1, d2, d3, d4, redo_count, k
-    # cut off unused entrys in list
+
+    # If spots were found, cut off unused entrys in list
     spot_ids = spot_ids[:spot_id]
     spots = spots[:spot_id, :]
 
@@ -418,7 +446,7 @@ def spoof_frame_cache_w_fid(name, coords, vals, fids, subpanel_shape):
 
 
 def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
-                     create_npz=True, spoof_thresholded=True,
+                     create_npz=True, spoof_thresholded=False,
                      save_threshold=250):
     mp_id = "p_"+str(os.getpid() % 41)
     a = " ==================================== \n"
@@ -428,7 +456,18 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
     f_h5R = h5py.File(glob.glob(chore['from']+os.sep+"*ff2*")[0], 'r')
     dat_h5L = f_h5L['imageseries/images']
     dat_h5R = f_h5R['imageseries/images']
+    
+    # because it's annoying to finish all the processing, only to fail during
+    # saving, pre-flight the hdf5 save file.
+    first_part = chore['to'] + os.sep + chore_name
+    h5_save_name_full = first_part + '.sparse'
+    h5_save = h5py.File(h5_save_name_full, 'w')
+    for thing in ['load', 'epoch', 'z_height', 'nframes', 'from']:
+        h5_save.attrs[thing] = chore[thing]
+    settings_grp = h5_save.create_group('settings/initial_instr')
+    unwrap_dict_to_h5(settings_grp, instr_dict)
 
+    # begin loading frames for median filter
     n_frames, n_skips = det_red._parse_chore(chore)[1:]
     med_skip = np.floor(n_frames/n_med_frames).astype(int)
     medL = np.median(dat_h5L[4::med_skip], axis=0).astype(np.uint16)
@@ -528,7 +567,8 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
             cc3d_feature_finder,
             data[k][(explored[k]-min_explored): i_stop],
             np.max(fids[k]+1),
-            k):
+            k,
+            partially_explored-explored[k]):
                 k for k in reducable}
         for future in as_completed(futures):
             out = future.result()
@@ -551,15 +591,12 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
         # redone_counter = partially_explored - deleted
         partially_explored = i_stop - deleted
         min_explored = new_min*1
-        if min_explored >= l_stop-n_skips:
+        if min_explored > l_stop-n_skips:
             print("XXXXX WARNING: I think I made a goof XXXXX")
         # print("back to loading from disk....")
 
     # save to h5py
-    first_part = chore['to'] + os.sep + chore_name
-    h5_save_name_full = first_part + '.sparse'
     print("{}: +++ saving h5 to {}".format(mp_id, chore['to']))
-    h5_save = h5py.File(h5_save_name_full, 'w')
     for k in keys:
         # all
         grp = h5_save.create_group('data/' + k)
@@ -567,10 +604,6 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
         grp.create_dataset('coords', data=coords[k], compression='gzip')
         grp.create_dataset('vals', data=vals[k], compression='gzip')
         grp.create_dataset('fids', data=fids[k][1:], compression='gzip')
-    for thing in ['load', 'epoch', 'z_height', 'nframes', 'from']:
-        h5_save.attrs[thing] = chore[thing]
-    settings_grp = h5_save.create_group('settings/initial_instr')
-    unwrap_dict_to_h5(settings_grp, instr_dict)
     h5_save.close()
 
     # save aggressively thresholded h5py if requested
@@ -589,7 +622,7 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
             gs.create_dataset('fids', data=m_fids[k][1:], compression='gzip')
         for thing in ['load', 'epoch', 'z_height', 'nframes', 'from']:
             h5_save_sml.attrs[thing] = chore[thing]
-        settings_grp = h5_save.create_group('settings/initial_instr')
+        settings_grp = h5_save_sml.create_group('settings/initial_instr')
         unwrap_dict_to_h5(settings_grp, instr_dict)
         h5_save_sml.close()
 
@@ -608,7 +641,7 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
             first_part+"-fid-" + k + ".npz",
             coords[k],
             vals[k],
-            fids[k],
+            fids[k][1:],
             subpanel_shape):
                 k for k in keys}
         futures.update(fid_futures)

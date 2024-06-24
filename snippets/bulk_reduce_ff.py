@@ -132,9 +132,8 @@ instr_dict = yaml.safe_load(open(default_instr_location,'r'))
 #########################################
 # Run the tasks
 #########################################
-# tasks are parallelized internally, so they should be ran in serial at the
-# high level. code is I/O limited, so multiprocessing this call achieves
-# very little.
+# tasks are parallelized internally, so they should be ran in serial here.
+# Code is I/O limited, so multiprocessing this is of limited use.
 for i, task_name in enumerate(task_names):
     print("########")
     print("  Running {}".format(task_name))
