@@ -592,8 +592,10 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
         partially_explored = i_stop - deleted
         min_explored = new_min*1
         if min_explored > l_stop-n_skips:
-            print("XXXXX WARNING: I think I made a goof XXXXX")
-        # print("back to loading from disk....")
+            if loaded < n_frames:
+                print("XXXXX WARNING: I think I made a goof XXXXX")
+            else:
+                print("{}: -- {} reduction completed".format(mp_id, deleted))
 
     # save to h5py
     print("{}: +++ saving h5 to {}".format(mp_id, chore['to']))

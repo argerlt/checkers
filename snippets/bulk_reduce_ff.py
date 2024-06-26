@@ -43,18 +43,18 @@ if re.match("^mse-dnc.*.coeit.osu.edu$", computer_name):
     locs = ["/local/scratch/2022_me36_ff_sparse/raw/",
             "/local/scratch/2022_me36_ff_sparse/reduced/",
             "/local/scratch/2022_me36_ff_sparse/metadata/"]
-elif re.match("^owens.*hpc.osc.edua$", computer_name):
+elif re.match("^o.*ten.osc.edu$", computer_name):
     print("running on OSC (Owens)")
     SLURM = "Owens"
-    locs = ["/fs/ess/PAS2405/CHESS_data/raw/2022-3/id1a3/ko-3371-b/raw",
-            "/fs/ess/PAS2405/CHESS_data/2022_me36_ff_sparse/reduced/",
-            "/fs/ess/PAS2405/CHESS_data/2022_me36_ff_sparse/metadata/"]
-elif re.match("^pitzer.*hpc.osc.edua$", computer_name):
+    locs = ["/fs/ess/PAS2405/CHESS_data/raw/2022-3/id1a3/ko-3371-b/",
+            "/fs/ess/PAS2405/CHESS_data/2022_me36_ff_sparse/results/",
+            "/fs/ess/PAS2405/CHESS_data/metadata/"]
+elif re.match("^p.*ten.osc.edu$", computer_name):
     print("running on OSC (Pitzer)")
     SLURM = "Pitzer"
-    locs = ["/fs/ess/PAS2405/CHESS_data/raw/2022-3/id1a3/ko-3371-b/raw",
-            "/fs/ess/PAS2405/CHESS_data/2022_me36_ff_sparse/reduced/",
-            "/fs/ess/PAS2405/CHESS_data/2022_me36_ff_sparse/metadata/"]
+    locs = ["/fs/ess/PAS2405/CHESS_data/raw/2022-3/id1a3/ko-3371-b/",
+            "/fs/ess/PAS2405/CHESS_data/2022_me36_ff_sparse/results/",
+            "/fs/ess/PAS2405/CHESS_data/metadata/"]
 elif re.match("HAL", computer_name):
     print("running on Austin's Laptop")
     locs = [
@@ -125,7 +125,8 @@ task_names = np.array(keys)[np.argsort([tasks[x]['epoch'] for x in keys])]
 
 # load up all the other weird metadata we will want.
 det_red = Detector_Reducer()
-default_instr_location = glob.glob(meta_dir+"/*8panel*AG.yml")[0]
+print(meta_dir)
+default_instr_location = glob.glob(meta_dir+"*8panel*AG.yml")[0]
 instr_dict = yaml.safe_load(open(default_instr_location,'r'))
 
 
