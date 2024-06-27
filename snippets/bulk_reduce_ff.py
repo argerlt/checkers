@@ -70,10 +70,15 @@ source_dir, destination_dir, meta_dir = locs
 #########################################
 #  Get the list of tasks that need doing
 #########################################
-experiment_name = "me3-6_fatigue"
+exp_names = ["me3-6_fatigue",
+             "me3-6-unloaded-ff-1",
+             "me3-6-fatigue-unloaded-ff-1"]
 
-lr = LogReader(source_dir+"me3-6_fatigue", destination_dir)
-tasks = lr.task_list
+sources = [source_dir + n for n in exp_names if os.path.exists(source_dir + n)]
+tasks = {}
+for source_dir in sources:
+    lr = LogReader(source_dir, destination_dir)
+    tasks.update(lr.task_list)
 
 # prune the task list
 keys = [x for x in tasks.keys()]
