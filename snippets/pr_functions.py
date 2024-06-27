@@ -333,7 +333,11 @@ def cc3d_feature_finder(data_slice,
     if redo_layers.size == 0:
         redo_count = 0
     else:
-        redo_count = l_count - np.min(redo_layers[redo_layers>1])
+        not_bottom_redos = redo_layers[redo_layers > 0]
+        if not_bottom_redos.size > 0:
+            redo_count = l_count - np.min(redo_layers[redo_layers > 1])
+        else:
+            redo_count = 0
 
     # Now cleanup remaining feature ids.
     # find spots that are big, complete, and new
@@ -560,9 +564,9 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
         # print("{}: -- running reduction ... ".format(mp_id))
         print("{}: - {} to {} loaded, {} in memory. starting reduction".format(
             mp_id, l_start, l_stop, i_stop))
-        # k = [x for x in reducable][0]
-        # a = cc3d_feature_finder(
-        #       data[k][(explored[k]-min_explored):i_stop],1 , k)
+        k = [x for x in reducable][0]
+        a = cc3d_feature_finder(
+              data[k][(explored[k]-min_explored):i_stop],1 , k)
         futures = {executor.submit(
             cc3d_feature_finder,
             data[k][(explored[k]-min_explored): i_stop],
