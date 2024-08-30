@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Fri Jun 21 16:55:30 2024
+Created on Thu Jul 25 16:08:02 2024
 
 @author: gerlt.1
 """
@@ -11,7 +11,7 @@ import glob
 import time
 from pr_functions import LogReader
 from pr_functions import Detector_Reducer
-from pr_functions import reduce_entire_ff
+from pr_functions import reduce_entire_nf
 import socket
 import re
 import sys
@@ -73,9 +73,8 @@ source_dir, destination_dir, meta_dir = locs
 #########################################
 #  Get the list of tasks that need doing
 #########################################
-exp_names = ["me3-6_fatigue",
-             "me3-6-unloaded-ff-1",
-             "me3-6-fatigue-unloaded-ff-1"]
+exp_names = ["me3-6-broke-nf-1",
+             "me3-6-unloaded-nf-2"]
 
 sources = [source_dir + n for n in exp_names if os.path.exists(source_dir + n)]
 tasks = {}
@@ -87,7 +86,7 @@ for source_dir in sources:
 keys = [x for x in tasks.keys()]
 for key in keys:
     # few tests were tiny scans to check on the part. ignore these.
-    if tasks[key]['nframes'] < 1440:
+    if tasks[key]['nframes'] < 10:
         tasks.pop(key)
         print(" -- {} too tiny to matter; tossing out".format(key))
     # If the raw data is missing on the local machine, toss it.
@@ -139,7 +138,7 @@ task_names = np.array(keys)[np.argsort([tasks[x]['epoch'] for x in keys])]
 # load up all the other weird metadata we will want.
 det_red = Detector_Reducer()
 print(meta_dir)
-default_instr_location = glob.glob(meta_dir+"*8panel*AG.yml")[0]
+default_instr_location = glob.glob(meta_dir+"manta_semi_calibrated.yml")[0]
 instr_dict = yaml.safe_load(open(default_instr_location,'r'))
 
 
@@ -154,7 +153,7 @@ for i, task_name in enumerate(task_names):
     print("    (task {} of {})".format(i + 1, len(task_names)))
     print("########")
     tic = time.time()
-    reduce_entire_ff(tasks[task_name], task_name, det_red, instr_dict)
+    reduce_entire_nf(tasks[task_name], task_name, det_red, instr_dict)
     toc = time.time()-tic
     print("########")
     print("    {} done. total time: {} seconds".format(task_name, int(toc)))
