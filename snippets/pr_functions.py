@@ -672,6 +672,14 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
             k,
             l_start - min_layer_in_spnl[k]):
                 k for k in reducable}
+        # REAL FAST!: h5py locks the GIL, so it can't pre-load data in the
+        # background. However, for the next 3-ish seconds, we are waiting on
+        # subprocesses, so we can preload some data from the h5py, which is
+        # the bottleneck of this process. It doesn't matter that we don't
+        # use this data, the important part is h5py caches these layers.
+        if l_stop < n_frames:
+            cache = dat_h5L[l_stop:np.min(l_stop+10, n_frames)]
+            cache = dat_h5R[l_stop:np.min(l_stop+10, n_frames)]
         for future in as_completed(futures):
             out = future.result()
             futures.pop(future)  # stop memory leak
