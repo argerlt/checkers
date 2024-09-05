@@ -27,7 +27,7 @@ import yaml
 overwrite = True
 
 ##################################
-## SET SOURCES AND DESTINATIONS ##
+#  SET SOURCES AND DESTINATIONS  #
 ##################################
 
 # add hard linked locations here
@@ -37,7 +37,7 @@ overwrite = True
 
 # If no loc already, Figure out where I am, and set directories accordingly
 computer_name = socket.gethostname()
-SLURM = None # flag for switching forom serial to HPC embarassingly parallel
+SLURM = None  # flag for switching forom serial to HPC embarassingly parallel
 if re.match("^mse-dnc.*.coeit.osu.edu$", computer_name):
     print("running on KyloRam")
     locs = ["/local/scratch2/CHESS_data/raw/2022-3/id1a3/ko-3371-b/",
@@ -140,8 +140,7 @@ task_names = np.array(keys)[np.argsort([tasks[x]['epoch'] for x in keys])]
 det_red = Detector_Reducer()
 print(meta_dir)
 default_instr_location = glob.glob(meta_dir+"*8panel*AG.yml")[0]
-instr_dict = yaml.safe_load(open(default_instr_location,'r'))
-
+instr_dict = yaml.safe_load(open(default_instr_location, 'r'))
 
 #########################################
 # Run the tasks

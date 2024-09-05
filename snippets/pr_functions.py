@@ -11,15 +11,14 @@ import cv2
 import glob
 import h5py
 import os
-import shutil
 import sparse
-import time
 import warnings
+
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
+
 from hexrd.utils.hdf5 import unwrap_dict_to_h5
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
 
@@ -373,12 +372,12 @@ class Detector_Reducer():
 # means jit doesn't have a function for returning indexes from unique (which
 # i need)
 def cc3d_ff_feature_finder(data_slice,
-                        smallest_free_fid,
-                        k,
-                        lowest_observed_layer=0,
-                        min_spot_size=30,
-                        min_total_spot_intensity=2000,
-                        ):
+                           smallest_free_fid,
+                           k,
+                           lowest_observed_layer=0,
+                           min_spot_size=30,
+                           min_total_spot_intensity=2000,
+                           ):
     # get binarized yes/no, use it to assign spot IDs.
     binarized = (data_slice > 0).astype(np.int8)
     feature_map = cc3d.connected_components(binarized)
@@ -388,15 +387,15 @@ def cc3d_ff_feature_finder(data_slice,
     l_count = data_slice.shape[0]
     for i in range(l_count):
         # toss 3x3 burned out pixels connecting spots accross omegas.
-        f2v = np.where([feature_map[i]>0])
-        if f2v[0].size <1:
+        f2v = np.where([feature_map[i] > 0])
+        if f2v[0].size < 1:
             continue
         fm_flat = feature_map[i][f2v[1:]]
         fid, inv, count = np.unique(fm_flat, False, True, True)
         fid[count < 10] = 0
         fid[fid > 0] = 1
         fid = fid.astype(np.int8)
-        binarized[i][f2v[1:]] =fid[inv]
+        binarized[i][f2v[1:]] = fid[inv]
     del fid, inv, count, i
     # redo the feature map.
     feature_map = cc3d.connected_components(binarized)
@@ -433,9 +432,9 @@ def cc3d_ff_feature_finder(data_slice,
     # make one final binarized map and feature map, just so our feature IDs
     # are sequential. this is unnecessary, but handy.
     binarized = binarized*0
-    binarized[np.isin(feature_map,finished_spots)] = 1
+    binarized[np.isin(feature_map, finished_spots)] = 1
     feature_map = cc3d.connected_components(binarized)
-    final_spot_ids = np.unique(feature_map[feature_map>0])
+    final_spot_ids = np.unique(feature_map[feature_map > 0])
     # cleanup, bc memory is precious
     del inv, counts, idxs, fids, binarized, f2v, old_spots
     del redo_layers, unfinished_spots
@@ -451,7 +450,7 @@ def cc3d_ff_feature_finder(data_slice,
     for fid in final_spot_ids:
         loc = np.where(sparse_fm == fid)
         if loc[0].max() <= lowest_observed_layer:
-            continue # This spot was already fully observed. Ignore.
+            continue  # This spot was already fully observed. Ignore.
         val = data_slice[loc]
         val_sum = np.sum(val)
         if val_sum < min_total_spot_intensity:
@@ -471,7 +470,7 @@ def cc3d_ff_feature_finder(data_slice,
     del data_slice
 
     # now that all the big datasets are explicitly deleted, allow the code
-    # to exit if it found no spots whatsoever    
+    # to exit if it found no spots whatsoever
     if spot_id < 1:  # triggers if no spots were found.
         del sparse_fm
         d1 = np.zeros([0, 4], dtype=float)
@@ -542,19 +541,20 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
     a = " ==================================== \n"
     b = "    {}: starting {}\n".format(mp_id, chore_name)
     print(a + b + a)
-    # REMINDER!!!!!! In the id1a3 setup, ff1 is on the RIGHT, and ff2 
+    # REMINDER!!!!!! In the id1a3 setup, ff1 is on the RIGHT, and ff2
     # is on the LEFT (opposite of assumption)
     f_h5L = h5py.File(glob.glob(chore['from']+os.sep+"*ff2*")[0], 'r')
     f_h5R = h5py.File(glob.glob(chore['from']+os.sep+"*ff1*")[0], 'r')
     dat_h5L = f_h5L['imageseries/images']
     dat_h5R = f_h5R['imageseries/images']
-    
+
     # because it's annoying to finish all the processing, only to fail during
     # saving, pre-flight the hdf5 save file.
     first_part = chore['to'] + os.sep + chore_name
     h5_save_name_full = first_part + '.sparse'
     h5_save = h5py.File(h5_save_name_full, 'w')
-    for thing in ['load', 'epoch', 'z_height', 'nframes', 'from']:
+    for thing in ['load', 'epoch', 'z_height', 'nframes',
+                  'from', 'start', 'stop', 'exposure']:
         h5_save.attrs[thing] = chore[thing]
     settings_grp = h5_save.create_group('settings/initial_instr')
     unwrap_dict_to_h5(settings_grp, instr_dict)
@@ -567,12 +567,12 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
     med_R = np.median(dat_h5R[4::med_skip], axis=0).astype(np.uint16)
     # next, assume background noise follows Poisson distribution
     # (reasonable assumption, as per Ralph's MTEX paper). calc the 99.99%
-    # threshold 
+    # threshold.
     # This is the threshold where, after subtracting the per-pixel variance,
     # we can be 99.99% sure data above this intensity is NOT purely background
     bg = (np.mean(med_L) + np.mean(med_R))/2
     bg_thresh = stats.poisson(bg).ppf(0.9999) - bg
-    
+
     # Set up per-subpanel containers for holding data
     panel_shape = np.array(dat_h5L.shape) - (n_skips, 0, 0)
     subpanel_shape = panel_shape//[1, det_red.shape[0], det_red.shape[1]]
@@ -584,9 +584,9 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
     coords = dict([(k, np.zeros([0, 3], dtype=np.int16)) for k in spnl_keys])
     vals = dict([(k, np.zeros([0, 1], dtype=float)) for k in spnl_keys])
     fids = dict([(k, np.zeros([1, 1], dtype=int)) for k in spnl_keys])
-    
+
     # set up trackers for which layers have been loaded, discarded, and
-    # previously scanned. 
+    # previously scanned.
     l_start = n_skips
     # the layerid corresponding to the data in data[k][0,:,:]
     min_layer_in_spnl = dict([(k, n_skips-1) for k in spnl_keys])
@@ -600,7 +600,7 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
         # number is less than 5, load 5 instead.
         # NOTE TO FUTURE AUSTIN: In a previous version of this, you had the
         # code load 8 frames at a time, so you could asyncronously load when
-        # multiprocessing. this caused all sorts of bookeeping problems. 
+        # multiprocessing. this caused all sorts of bookeeping problems.
         # just loading full chuncks as you need them is simpler, if slower,
         # but on OSC, it makes zero difference b/c we aren't parallelizing
         # loads per-node due to memory constraints.
@@ -619,6 +619,9 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
         # load new data
         # REMINDER! This line adds the horizontal flip to ff1 (Right panel)
         # and the vertical flip to ff2 (Left panel)
+        # AS A NOTE THOUGH, the origin for images is in the TOP LEFT, not
+        # the bottom left. This is corrected for when converting between
+        # sparse representation and lab_xyz (not part of this function).
         # AUSTIN! you lost all of 8/29/2024 to not documenting this flip, and
         # also writing it backwards. clean your code, dummy.
         dataL = (np.asanyarray(
@@ -636,7 +639,7 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
             data[kr][spnl_startr:spnl_startr + l_delta] = dataR[:, a:b, c:d]
             data[kl][spnl_startl:spnl_startl + l_delta] = dataL[:, a:b, c:d]
         if l_stop < (n_frames+n_skips):
-            # get number of explored layers. if a subpanel doesn't have 
+            # get number of explored layers. if a subpanel doesn't have
             # at least 20 unexplored panels loaded, it's not worth reducing,
             # so skip it for now
             reducable = [k for k in spnl_keys if
@@ -660,8 +663,8 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
         print("{}: - layers {} to {} loaded, starting reduction".format(
             mp_id, l_start, l_stop))
         # series test line. leave commented during run
-#        k = spnl_keys[0]
-#        a=cc3d_ff_feature_finder(data[k][:(l_stop-min_layer_in_spnl[k])],1,k)
+        # k = spnl_keys[0]
+        # a=cc3d_ff_feature_finder(data[k][:(l_stop-min_layer_in_spnl[k])],1,k)
         futures = {executor.submit(
             cc3d_ff_feature_finder,
             data[k][:(l_stop - min_layer_in_spnl[k])],
@@ -677,8 +680,8 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
             # up until here, data has been in (omega,x,y) format, as it's
             # easier to load that way, but it makes more sense to save the
             # sparsified final data (x,y,omega).
-            new_spots = out[0][:,(0,2,3,1)] + [0, 0, 0, old_l - n_skips]
-            new_coords = out[1][:,(1,2,0)] + [0, 0, old_l - n_skips]
+            new_spots = out[0][:, (0, 2, 3, 1)] + [0, 0, 0, old_l - n_skips]
+            new_coords = out[1][:, (1, 2, 0)] + [0, 0, old_l - n_skips]
             spots[k] = np.vstack([spots[k], new_spots])
             coords[k] = np.vstack([coords[k], new_coords])
             vals[k] = np.vstack([vals[k], out[2]])
@@ -687,7 +690,7 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
             data[k] = data[k][removable_layers:]
             min_layer_in_spnl[k] = l_stop - out[4]
         executor.shutdown()
-        
+
         # update on how many layers were purged
         purged = max(min_layer_in_spnl.values()) - spnl_max
         print("{}: -- {} layers done and purged ".format(mp_id, purged))
@@ -699,20 +702,7 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
             else:
                 print("XXXXX WARNING: I think I made a goof XXXXX")
 
-
-        # new_min = np.min([x for x in explored.values()])
-        # if new_min == min_explored:
-        #     continue
-        # deleted = new_min - min_explored
-        # for k in spnl_keys:
-        #     data[k] = data[k][deleted:]
-        # print("{}: -- {} layers done and purged ".format(mp_id, deleted))
-        # # redone_counter = partially_explored - deleted
-        # partially_explored = i_stop - deleted
-        # min_explored = new_min*1
-
-
-    # IF you made it this far, congrats, reduction is done.    
+    # IF you made it this far, congrats, reduction is done.
     # save to h5py
     print("{}: +++ saving h5 to {}".format(mp_id, chore['to']))
     for k in spnl_keys:
@@ -729,7 +719,8 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
         h5_save_name_sml = first_part + 'T{}.sparser'.format(save_threshold)
         h5_save_sml = h5py.File(h5_save_name_sml, 'w')
         masks = dict([(k, vals[k] > save_threshold) for k in spnl_keys])
-        m_coords = dict([(k, coords[k][masks[k].flatten(), :]) for k in spnl_keys])
+        m_coords = dict(
+            [(k, coords[k][masks[k].flatten(), :]) for k in spnl_keys])
         m_vals = dict([(k, vals[k][masks[k]]) for k in spnl_keys])
         m_fids = dict([(k, fids[k][1:][masks[k]]) for k in spnl_keys])
         for k in spnl_keys:
@@ -738,7 +729,8 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
             gs.create_dataset('coords', data=m_coords[k], compression='gzip')
             gs.create_dataset('vals', data=m_vals[k], compression='gzip')
             gs.create_dataset('fids', data=m_fids[k][1:], compression='gzip')
-        for thing in ['load', 'epoch', 'z_height', 'nframes', 'from']:
+        for thing in ['load', 'epoch', 'z_height', 'nframes',
+                      'from', 'start', 'stop', 'exposure']:
             h5_save_sml.attrs[thing] = chore[thing]
         settings_grp = h5_save_sml.create_group('settings/initial_instr')
         unwrap_dict_to_h5(settings_grp, instr_dict)
@@ -791,7 +783,6 @@ def reduce_entire_ff(chore, chore_name, det_red, instr_dict, n_med_frames=20,
     del coords, vals, spots, fids, dataL, dataR
     del executor, data
     return
-
 
 
 def cc3d_nf_feature_finder(data_slice,
